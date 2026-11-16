@@ -1,0 +1,27 @@
+name: Code test (simulated prices)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["test/**"]           # push a test/ branch to check code before it reaches main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Run both engines and write trade journals on fake prices
+        run: python -m tools.demo_journal
+      - name: Build both pages
+        run: python site/build.py
+      - name: Run the pages' JavaScript
+        run: |
+          npm install --no-save jsdom@24.1.0
+          node tools/render_test.js

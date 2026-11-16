@@ -116,6 +116,14 @@ td .sub { color: var(--muted); font: 12px var(--font-body); margin-left: 6px; }
 .kv div:last-child { border-bottom: 0; }
 .kv b { font: 500 14px var(--font-mono); }
 .note { font-size: 13.5px; color: var(--muted); max-width: 75ch; }
+details.j { border: 1px solid var(--line); border-radius: 10px; }
+details.j > summary { cursor: pointer; padding: 12px 14px; display: flex; gap: 12px; flex-wrap: wrap; align-items: baseline; list-style: none; }
+details.j > summary::-webkit-details-marker { display: none; }
+details.j > summary::before { content: "▸"; color: var(--muted); }
+details.j[open] > summary::before { content: "▾"; }
+details.j .jb { padding: 0 14px 14px; display: grid; gap: 12px; }
+td.why { white-space: normal; text-align: left; font: 13px/1.45 var(--font-body); min-width: 300px; max-width: 520px; }
+.jt { font-size: 12.5px; color: var(--muted); font-weight: 600; }
 
 footer { border-top: 1px solid var(--line); }
 .foot { max-width: 1180px; margin: 0 auto; padding: 24px 20px 40px; display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; font-size: 13.5px; color: var(--muted); }
@@ -128,7 +136,7 @@ footer { border-top: 1px solid var(--line); }
   <div class="nav-inner">
     <div class="brand"><em>Hanna Capital</em><span>Kyle Hanna</span></div>
     <div class="links">
-      <a href="#performance">Performance</a><a href="#book">Book</a><a href="#trades">Trades</a>
+      <a href="#performance">Performance</a><a href="#book">Book</a><a href="#trades">Trades</a><a href="#journal">Journal</a>
       <a href="#formula">Formula</a><a href="#check">Pre-launch check</a>
     </div>
     <div class="cta">
@@ -174,6 +182,9 @@ footer { border-top: 1px solid var(--line); }
 
   <h2 class="sec" id="trades">Trade blotter <small id="tradeSub"></small></h2>
   <section class="card"><div class="card-b wrap"><table id="blotter"></table></div></section>
+
+  <h2 class="sec" id="journal">Trade journal <small id="journalSub"></small></h2>
+  <section class="card"><div class="card-b" id="journalBox" style="display:grid;gap:12px"></div></section>
 
   <h2 class="sec" id="formula">The formula <small>Fixed before launch</small></h2>
   <section class="grid2">
@@ -279,6 +290,24 @@ document.getElementById("blotter").innerHTML = TR.length
     TR.map(t => `<tr><td>${t.date}</td><td><span class="side ${t.side.includes("SELL") ? "S" : "L"}">${t.side}</span></td><td>${t.ticker}</td>
       <td>${Math.abs(t.qty).toLocaleString("en-US", { maximumFractionDigits: 0 })}</td><td>${(+t.price).toFixed(2)}</td><td>${usd(Math.abs(t.value))}</td><td>${usd(+t.cost, 2)}</td><td class="reason">${t.reason}</td></tr>`).join("") + "</tbody>"
   : `<tbody><tr><td class="reason">The first trades happen at the launch close. They'll appear here, time-stamped, the same evening.</td></tr></tbody>`;
+
+/* ---- trade journal ---- */
+const J = D.journal || [];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+document.getElementById("journalSub").textContent = J.length
+  ? `${J.length} rebalance${J.length > 1 ? "s" : ""} · every trade with the reason it was made` : "Starts at launch";
+document.getElementById("journalBox").innerHTML = J.length ? J.slice().reverse().map((e, n) => `
+  <details class="j"${n === 0 ? " open" : ""}><summary><b>${fmtDate(e.date)}</b><span class="reason">${esc(e.reason)} · ${e.trades.length} trade${e.trades.length > 1 ? "s" : ""}</span></summary>
+  <div class="jb"><p class="note">${esc(e.summary)}</p>
+    <div class="wrap"><table><thead><tr><th>Action</th><th>Symbol</th><th>Shares</th><th>Fill price</th><th>% of fund, before → after</th><th>Why</th></tr></thead><tbody>` +
+    e.trades.map(t => `<tr><td><span class="side ${t.side.includes("SELL") ? "S" : "L"}">${esc(t.action)}</span></td><td><span class="sym">${esc(t.ticker)}</span><span class="sub">${esc(t.name)}</span></td>
+      <td>${Math.abs(t.qty).toLocaleString("en-US", { maximumFractionDigits: 0 })}</td><td>${(+t.price).toFixed(2)}</td><td>${pct(t.w_before, 1)} → ${pct(t.w_after, 1)}</td><td class="why">${esc(t.why)}</td></tr>`).join("") +
+    `</tbody></table></div>
+    <div class="jt">${esc(e.signalTitle)}</div>
+    <div class="wrap"><table><thead><tr>${e.signalCols.map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>` +
+    e.signals.map(r => `<tr>${r.map(x => `<td>${esc(x)}</td>`).join("")}</tr>`).join("") + `</tbody></table></div>
+  </div></details>`).join("")
+  : `<p class="note">Each rebalance will appear here with every trade and the reason for it, written by the same code that makes the trades, from the numbers it used that evening, and committed to the public history with the trades.</p>`;
 
 /* ---- formula + costs ---- */
 if (D.formulaHtml) {

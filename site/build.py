@@ -36,6 +36,8 @@ def build(C, data_dir, out_rel, page):
     trades = read_csv(data_dir, "trades.csv")
     state = read_json(data_dir, "state.json")
     check = read_json(data_dir, "check.json")
+    jpath = os.path.join(ROOT, data_dir, "journal.jsonl")
+    journal = [json.loads(line) for line in open(jpath) if line.strip()] if os.path.exists(jpath) else []
 
     positions, cash, totals = [], C.START_CAPITAL, {}
     if state:
@@ -58,7 +60,7 @@ def build(C, data_dir, out_rel, page):
     cfg = {k: getattr(C, k) for k in dir(C) if k.isupper()}
     repo = os.environ.get("GITHUB_REPOSITORY", "kahanna1908/hanna-capital")
     data = {"config": cfg, "nav": nav, "positions": positions, "cash": cash, "totals": totals,
-            "trades": trades[::-1][:30], "nTrades": len(trades), "check": check,
+            "trades": trades[::-1][:30], "nTrades": len(trades), "check": check, "journal": journal,
             "spyAtLaunch": spy_at_launch, "repo": f"https://github.com/{repo}", **page}
     tpl = open(os.path.join(HERE, "template.html"), encoding="utf-8").read()
     out = os.path.join(HERE, out_rel)

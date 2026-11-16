@@ -16,7 +16,7 @@ import pandas as pd
 from v3 import config as C
 from v3 import engine
 
-STATE, NAV, TRADES = (os.path.join(C.DATA_DIR, f) for f in ("state.json", "nav.csv", "trades.csv"))
+STATE, NAV, TRADES, JOURNAL = (os.path.join(C.DATA_DIR, f) for f in ("state.json", "nav.csv", "trades.csv", "journal.jsonl"))
 NAV_COLS = ["date", "nav", "equity", "gross_return", "long_exposure", "short_exposure",
             "net_exposure", "spy", "tbill"]
 TRADE_COLS = ["date", "ticker", "side", "qty", "price", "value", "cost", "reason"]
@@ -64,6 +64,13 @@ def main():
         row, trades = engine.step(state, d, px.iloc[i], sig.iloc[i - 1], rets.iloc[1:i], float(rate.iloc[i]))
         append(NAV, NAV_COLS, [row])
         append(TRADES, TRADE_COLS, trades)
+        try:                                                   # the journal must never block the books
+            from v3 import journal
+            e = journal.entry(d, px, i, sig, rate, rets, trades, state, row)
+            if e:
+                journal.append(JOURNAL, e)
+        except Exception as ex:
+            print(f"Journal skipped for {d.date()}: {ex!r}")
         print(f"{row['date']}  NAV ${row['nav']:.4f}  long {row['long_exposure']:.0%}  "
               f"short {row['short_exposure']:.0%}  trades {len(trades)}")
     with open(STATE, "w") as f:
