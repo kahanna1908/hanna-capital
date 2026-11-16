@@ -1,4 +1,5 @@
 __pycache__/
 *.pyc
 site/index.html
+site/v3/
 HANDOFF.md

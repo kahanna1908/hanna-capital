@@ -6,7 +6,7 @@ on:
   workflow_dispatch:             # "Run workflow" button for a manual run
   push:
     branches: [main]
-    paths: ["site/**", "fund/**"]
+    paths: ["site/**", "fund/**", "v3/**"]
 
 permissions:
   contents: write
@@ -26,10 +26,11 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - name: Process today's close
+      - name: Process today's close (v2)
         run: python -m fund.run_daily
-      - name: Build website
-        run: python site/build.py
+      - name: Process today's close (v3)
+        continue-on-error: true       # a v3 problem must never block v2's books
+        run: python -m v3.run_daily
       - name: Save the books
         run: |
           git config user.name "hanna-capital-bot"
@@ -38,6 +39,8 @@ jobs:
           git diff --cached --quiet || git commit -m "Close of $(date -u +%Y-%m-%d): update NAV, positions, trades"
           git pull --rebase
           git push
+      - name: Build website
+        run: python site/build.py
       - uses: actions/upload-pages-artifact@v4
         with:
           path: site

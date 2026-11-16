@@ -47,6 +47,17 @@ z(x)     = standard deviations above the average sector that day
 
 The fund's books live in `data/`: `nav.csv` (daily NAV and exposures), `trades.csv` (every fill), and `state.json` (positions, cash, high-water mark).
 
+## Fund versions
+
+| Version | Strategy | Status |
+|---|---|---|
+| v2 (this page) | Sector market-neutral long/short | Live since the close of 2026-11-16 |
+| v3 | Multi-asset trend following across 32 ETFs ([design](v3/DESIGN.md), [site](https://kahanna1908.github.io/hanna-capital/v3/)) | Designed, pre-launch check pending |
+
+Rules for versions: a live fund's formula is never edited. A change means a new version with its own launch date,
+starting at $100. Every version stays public, including the ones that don't work. A version is retired only after
+at least 12 months live, or right away if it is clearly broken.
+
 ## Disclaimer
 
 Paper trading with simulated money. No real capital is invested and no outside money is accepted. This is not investment advice.

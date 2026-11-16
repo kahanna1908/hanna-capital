@@ -132,6 +132,7 @@ footer { border-top: 1px solid var(--line); }
       <a href="#formula">Formula</a><a href="#check">Pre-launch check</a>
     </div>
     <div class="cta">
+      <a id="otherFund" href="#" hidden></a>
       <a class="sm-hide" id="codeLink" href="#">Code</a>
       <a href="https://www.linkedin.com/in/kyle-hanna-534839342">LinkedIn</a>
     </div>
@@ -144,7 +145,7 @@ footer { border-top: 1px solid var(--line); }
   <section class="hero">
     <div>
       <h1 id="title"></h1>
-      <p>A market-neutral long/short fund across the 11 U.S. sector ETFs. It goes long the strongest sectors, short the weakest, and hedges out the stock market with SPY. A script runs after every market close, makes the trades, and updates this page. Every trade is time-stamped in the public code history, so the track record can't be edited after the fact.</p>
+      <p id="about">A market-neutral long/short fund across the 11 U.S. sector ETFs. It goes long the strongest sectors, short the weakest, and hedges out the stock market with SPY. A script runs after every market close, makes the trades, and updates this page. Every trade is time-stamped in the public code history, so the track record can't be edited after the fact.</p>
     </div>
     <div class="navbox">
       <div class="lab">NAV per share</div>
@@ -216,12 +217,16 @@ const MIN_DAYS = 20;
 
 document.querySelectorAll("#codeLink, #codeLink2").forEach(a => a.href = D.repo);
 document.getElementById("title").textContent = C.FUND_NAME;
+if (D.about) document.getElementById("about").textContent = D.about;
+if (D.otherFund) { const o = document.getElementById("otherFund"); o.textContent = D.otherFund.label; o.href = D.otherFund.href; o.hidden = false; }
+const launchText = C.LAUNCH_DATE ? fmtDate(C.LAUNCH_DATE) : null;
 
 /* ---- status + hero ---- */
 const last = live ? N[N.length - 1] : null, first = live ? N[0] : null, days = N.length;
 document.getElementById("status").innerHTML = live
   ? `<span class="pill live">LIVE</span> Launched ${fmtDate(C.LAUNCH_DATE)} · Day ${days} · Updated after the close on ${fmtDate(last.date)}`
-  : `<span class="pill pre">PRE-LAUNCH</span> Trading starts at the market close on ${fmtDate(C.LAUNCH_DATE)} with ${usd(C.START_CAPITAL)}`;
+  : launchText ? `<span class="pill pre">PRE-LAUNCH</span> Trading starts at the market close on ${launchText} with ${usd(C.START_CAPITAL)}`
+  : `<span class="pill pre">PRE-LAUNCH</span> Launch date to be set after the pre-launch check · ${usd(C.START_CAPITAL)} starting capital`;
 const navV = live ? last.nav : C.START_NAV, eqV = live ? last.equity : C.START_CAPITAL;
 document.getElementById("nav").textContent = "$" + navV.toFixed(2);
 const rets = N.map((r, i) => i === 0 ? r.nav / C.START_NAV - 1 : r.nav / N[i - 1].nav - 1);
@@ -246,7 +251,7 @@ const T = [
   ["Return since launch", pct(itd), itd], ["SPY since launch", pct(spyItd), spyItd],
   ["Volatility (ann.)", enough ? pct(vol, 1, false) : "—", null, enough ? "" : wait],
   ["Sharpe ratio", enough ? num(sharpe) : "—", null, enough ? "" : wait],
-  ["Beta to SPY", enough ? num(beta) : "—", null, enough ? "target 0.00" : wait],
+  ["Beta to SPY", enough ? num(beta) : "—", null, enough ? (D.betaNote || "target 0.00") : wait],
   ["Max drawdown", pct(mdd), mdd < 0 ? -1 : 0], ["Current drawdown", pct(cdd), cdd < 0 ? -1 : 0],
   ["Best day", live ? pct(Math.max(...rets)) : "—", live ? Math.max(...rets) : null],
   ["Worst day", live ? pct(Math.min(...rets)) : "—", live ? Math.min(...rets) : null],
@@ -276,6 +281,10 @@ document.getElementById("blotter").innerHTML = TR.length
   : `<tbody><tr><td class="reason">The first trades happen at the launch close. They'll appear here, time-stamped, the same evening.</td></tr></tbody>`;
 
 /* ---- formula + costs ---- */
+if (D.formulaHtml) {
+  document.getElementById("formulaBox").innerHTML = D.formulaHtml;
+  document.getElementById("rules").innerHTML = D.rules.map(x => `<li>${x}</li>`).join("");
+} else {
 document.getElementById("formulaBox").innerHTML =
   `<span class="k">score</span> = ${C.W_MOM} × z(<span class="k">momentum</span>) + ${C.W_TREND} × z(<span class="k">trend</span>)<br>` +
   `<span class="c">momentum = ${C.MOM_LOOKBACK / 21}-month return, skipping the latest month<br>trend = price vs its ${C.TREND_SMA}-day average<br>z(x) = standard deviations above the average sector that day</span>`;
@@ -286,6 +295,7 @@ document.getElementById("rules").innerHTML = [
   `<b>Hedge</b> the book's market beta with ${C.HEDGE}, so returns come from the sector spread, not from the market rising.`,
   `<b>Cut risk in half</b> if the fund falls ${Math.abs(C.DD_CUT * 100)}% from its peak; restore it above ${Math.abs(C.DD_RESET * 100)}%.`,
 ].map(x => `<li>${x}</li>`).join("");
+}
 const tot = D.totals;
 document.getElementById("costs").innerHTML = Object.entries(tot).map(([k, v]) => `<div><span>${k}</span><b class="${k === "Interest earned" ? cls(v) : ""}">${usd(v)}</b></div>`).join("");
 document.getElementById("feeNote").textContent = `Fees: ${C.MGMT_FEE * 100}% a year management, charged daily, and ${C.PERF_FEE * 100}% of gains above a high-water mark, charged each January. Trades cost ${C.COST_BPS} basis points, shorts cost ${C.BORROW_FEE * 100}% a year to borrow, and cash earns the 3-month Treasury bill rate. The NAV above is after all of it.`;
@@ -303,7 +313,7 @@ document.getElementById("checkBox").innerHTML = K
 let charts = {};
 function draw() {
   if (!live) {
-    document.getElementById("navWrap").innerHTML = `<div class="empty">The chart starts at the launch close on ${fmtDate(C.LAUNCH_DATE)}.<br>Every point after that is a real, after-the-fact NAV.</div>`;
+    document.getElementById("navWrap").innerHTML = `<div class="empty">The chart starts at the launch close${launchText ? " on " + launchText : ""}.<br>Every point after that is a real, after-the-fact NAV.</div>`;
     document.getElementById("expWrap").style.display = "none"; return;
   }
   const c = { ink: css("--ink"), muted: css("--muted"), line: css("--line"), surface: css("--surface"), accent: css("--accent"), spy: css("--spy"), pos: css("--pos"), neg: css("--neg") };

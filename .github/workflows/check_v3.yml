@@ -1,0 +1,35 @@
+name: v3 pre-launch formula check
+
+on:
+  workflow_dispatch:
+    inputs:
+      demo:
+        description: "Simulated prices (tests the code only; result is not saved)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Run the v3 engine over history once
+        run: python -m v3.check ${{ inputs.demo && '--demo' || '' }}
+      - name: Build the site (catches page errors)
+        run: python site/build.py
+      - name: Save the result
+        if: ${{ !inputs.demo }}
+        run: |
+          git config user.name "hanna-capital-bot"
+          git config user.email "hanna-capital-bot@users.noreply.github.com"
+          git add data/v3/check.json
+          git diff --cached --quiet || git commit -m "v3 pre-launch formula check"
+          git pull --rebase
+          git push
