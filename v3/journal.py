@@ -61,7 +61,7 @@ def entry(d, px: pd.DataFrame, i: int, sig: pd.DataFrame, rate: pd.Series, rets:
         elif k.startswith("Close"):
             why = f"Signal no longer supports the position: {facts(t)}."
         else:
-            why = (f"Trend unchanged ({'up' if s[t] > 0 else 'down'}; {facts(t)}). Resized from {w0:+.1%} to "
+            why = (f"Trend still {'up' if s[t] > 0 else 'down'} ({facts(t)}). Resized from {w0:+.1%} to "
                    f"{w1:+.1%} of NAV as volatilities and correlations shifted, to stay at the "
                    f"{C.VOL_TARGET:.0%} volatility target.")
         out.append({"ticker": t, "name": C.NAMES.get(t, t), "action": k, "side": tr["side"], "qty": tr["qty"],
