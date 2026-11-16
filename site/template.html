@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hanna Capital Live Fund</title>
+<meta name="description" content="A live paper-traded, market-neutral long/short sector fund built and run by Kyle Hanna. Updated after every market close.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout: a fund's live tear sheet. Status and NAV first, then the book, the blotter, and the rules. */
+  --bg: #f4f2f1; --surface: #ffffff; --ink: #1d1a1c; --muted: #6c6468; --line: #e3dedf;
+  --accent: #860038; --accent-soft: #f6e6ec; --pos: #137a4b; --neg: #b42318; --spy: #8b8387;
+  --nav: #2a0a17; --nav-ink: #f6e9ee;
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141113; --surface: #1d191b; --ink: #f1ecee; --muted: #a49a9f; --line: #332c30;
+    --accent: #e26a92; --accent-soft: #3a1825; --pos: #4cc38a; --neg: #f07a6e; --spy: #8f868b;
+    --nav: #0e0a0c; --nav-ink: #f1e6ea; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141113; --surface: #1d191b; --ink: #f1ecee; --muted: #a49a9f; --line: #332c30;
+  --accent: #e26a92; --accent-soft: #3a1825; --pos: #4cc38a; --neg: #f07a6e; --spy: #8f868b;
+  --nav: #0e0a0c; --nav-ink: #f1e6ea; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 70px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font-body); }
+a { color: var(--accent); }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono, td, .tile b { font-variant-numeric: tabular-nums; }
+
+.nav { position: sticky; top: 0; z-index: 10; background: var(--nav); color: var(--nav-ink); }
+.nav-inner { max-width: 1180px; margin: 0 auto; padding: 0 20px; height: 56px; display: flex; align-items: center; gap: 26px; }
+.brand { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+.brand em { font: 600 19px var(--font-display); font-style: normal; }
+.brand span { font-size: 13px; opacity: .7; }
+.links { display: flex; gap: 2px; flex: 1; overflow-x: auto; scrollbar-width: none; }
+.links a { color: var(--nav-ink); opacity: .75; text-decoration: none; font-size: 14px; padding: 18px 10px; border-bottom: 2px solid transparent; white-space: nowrap; }
+.links a:hover { opacity: 1; border-bottom-color: var(--accent); }
+.cta a { color: var(--nav-ink); border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 5px 11px; font-size: 13px; text-decoration: none; white-space: nowrap; margin-left: 6px; }
+@media (max-width: 760px) { .brand span, .cta .sm-hide { display: none; } }
+
+main { max-width: 1180px; margin: 0 auto; padding: 22px 20px 40px; display: grid; gap: 20px; }
+.status { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13.5px; color: var(--muted); }
+.pill { display: inline-flex; align-items: center; gap: 7px; font: 600 12px var(--font-body); letter-spacing: .05em; padding: 4px 10px; border-radius: 999px; }
+.pill.live { background: color-mix(in srgb, var(--pos) 15%, transparent); color: var(--pos); }
+.pill.live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill.pre { background: var(--accent-soft); color: var(--accent); }
+
+.hero { display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; align-items: end; }
+.hero h1 { font: 600 clamp(28px, 4vw, 40px)/1.12 var(--font-display); }
+.hero p { color: var(--muted); margin: 10px 0 0; max-width: 62ch; }
+.navbox { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+.navbox .lab { font-size: 12.5px; color: var(--muted); }
+.navbox .big { font: 600 40px/1.05 var(--font-mono); letter-spacing: -.02em; margin: 2px 0 6px; }
+.navbox .row { display: flex; gap: 18px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.navbox .row b { color: var(--ink); font-family: var(--font-mono); font-weight: 500; }
+@media (max-width: 860px) { .hero { grid-template-columns: 1fr; } }
+.up { color: var(--pos) !important; } .down { color: var(--neg) !important; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.card-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.card-h h2 { font-size: 15px; font-weight: 600; display: flex; gap: 10px; align-items: baseline; }
+.card-h h2 small { font-weight: 400; color: var(--muted); font-size: 13px; }
+.card-b { padding: 18px; }
+.sec { font: 600 24px var(--font-display); margin: 12px 2px -4px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.sec small { font: 400 14px var(--font-body); color: var(--muted); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.chart { position: relative; height: 300px; }
+.chart.sm { height: 110px; }
+.empty { display: grid; place-items: center; height: 100%; color: var(--muted); font-size: 14px; text-align: center; border: 1px dashed var(--line); border-radius: 10px; padding: 20px; }
+.cap { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+.tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.tile { border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; min-width: 0; }
+.tile span { display: block; font-size: 12px; color: var(--muted); }
+.tile b { display: block; font: 600 18px var(--font-mono); margin-top: 3px; }
+.tile em { display: block; font-style: normal; font-size: 11px; color: var(--muted); margin-top: 2px; }
+@media (max-width: 900px) { .tiles { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 480px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+
+.wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { text-align: right; font-weight: 500; color: var(--muted); font-size: 12px; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { text-align: right; padding: 9px 10px; border-bottom: 1px solid var(--line); font: 13px var(--font-mono); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+tr:last-child td { border-bottom: 0; }
+td .sym { font-weight: 600; }
+td .sub { color: var(--muted); font: 12px var(--font-body); margin-left: 6px; }
+.side { font: 600 11px var(--font-body); padding: 2px 7px; border-radius: 4px; letter-spacing: .04em; }
+.side.L { background: color-mix(in srgb, var(--pos) 15%, transparent); color: var(--pos); }
+.side.S { background: color-mix(in srgb, var(--neg) 15%, transparent); color: var(--neg); }
+.reason { color: var(--muted); font: 12px var(--font-body); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+
+.formula { font: 14px/1.75 var(--font-mono); background: var(--bg); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; padding: 14px 16px; overflow-x: auto; }
+.formula .k { color: var(--accent); font-weight: 600; }
+.formula .c { color: var(--muted); }
+.rules { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 14px; color: var(--muted); }
+.rules b { color: var(--ink); }
+.kv { display: grid; gap: 8px; font-size: 14px; }
+.kv div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 7px; }
+.kv div:last-child { border-bottom: 0; }
+.kv b { font: 500 14px var(--font-mono); }
+.note { font-size: 13.5px; color: var(--muted); max-width: 75ch; }
+
+footer { border-top: 1px solid var(--line); }
+.foot { max-width: 1180px; margin: 0 auto; padding: 24px 20px 40px; display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; font-size: 13.5px; color: var(--muted); }
+.foot b { color: var(--ink); font: 600 17px var(--font-display); display: block; }
+.foot .disc { max-width: 60ch; }
+</style>
+</head>
+<body>
+<nav class="nav" aria-label="Sections">
+  <div class="nav-inner">
+    <div class="brand"><em>Hanna Capital</em><span>Kyle Hanna</span></div>
+    <div class="links">
+      <a href="#performance">Performance</a><a href="#book">Book</a><a href="#trades">Trades</a>
+      <a href="#formula">Formula</a><a href="#check">Pre-launch check</a>
+    </div>
+    <div class="cta">
+      <a class="sm-hide" id="codeLink" href="#">Code</a>
+      <a href="https://www.linkedin.com/in/kyle-hanna-534839342">LinkedIn</a>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <div class="status" id="status"></div>
+
+  <section class="hero">
+    <div>
+      <h1 id="title"></h1>
+      <p>A market-neutral long/short fund across the 11 U.S. sector ETFs. It goes long the strongest sectors, short the weakest, and hedges out the stock market with SPY. A script runs after every market close, makes the trades, and updates this page. Every trade is time-stamped in the public code history, so the track record can't be edited after the fact.</p>
+    </div>
+    <div class="navbox">
+      <div class="lab">NAV per share</div>
+      <div class="big" id="nav">—</div>
+      <div class="row" id="navRow"></div>
+    </div>
+  </section>
+
+  <section class="card" id="performance">
+    <div class="card-h"><h2>Performance since launch <small id="perfSub"></small></h2></div>
+    <div class="card-b">
+      <div class="legend"><span><i style="background:var(--accent)"></i>Fund NAV, net of all fees</span><span><i style="background:var(--spy)"></i>SPY, same start</span></div>
+      <div class="chart" id="navWrap"><canvas id="navChart" aria-label="Fund NAV versus SPY since launch"></canvas></div>
+      <div class="chart sm" id="expWrap"><canvas id="expChart" aria-label="Long and short exposure"></canvas></div>
+      <div class="cap">Lower panel: long exposure (above zero) and short exposure (below zero), as a percent of the fund.</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-h"><h2>Live statistics <small>Annualized with 252 trading days</small></h2></div>
+    <div class="card-b"><div class="tiles" id="tiles"></div></div>
+  </section>
+
+  <h2 class="sec" id="book">Book <small id="bookSub"></small></h2>
+  <section class="card"><div class="card-b wrap"><table id="bookTable"></table></div></section>
+
+  <h2 class="sec" id="trades">Trade blotter <small id="tradeSub"></small></h2>
+  <section class="card"><div class="card-b wrap"><table id="blotter"></table></div></section>
+
+  <h2 class="sec" id="formula">The formula <small>Fixed before launch</small></h2>
+  <section class="grid2">
+    <div class="card"><div class="card-b" style="display:grid;gap:14px">
+      <div class="formula" id="formulaBox"></div>
+      <ol class="rules" id="rules"></ol>
+    </div></div>
+    <div class="card">
+      <div class="card-h"><h2>Costs and fees to date</h2></div>
+      <div class="card-b" style="display:grid;gap:14px">
+        <div class="kv" id="costs"></div>
+        <p class="note" id="feeNote"></p>
+      </div>
+    </div>
+  </section>
+
+  <h2 class="sec" id="check">Pre-launch check <small>One historical run, to make sure the formula wasn't broken</small></h2>
+  <section class="card"><div class="card-b" style="display:grid;gap:12px" id="checkBox"></div></section>
+</main>
+
+<footer>
+  <div class="foot">
+    <div><b>Kyle Hanna</b>Fordham University, Gabelli School of Business · B.S. Applied Accounting and Finance, 2030<br>
+      <span class="mono">kh124@fordham.edu</span> · <a href="https://www.linkedin.com/in/kyle-hanna-534839342">LinkedIn</a> · <a id="codeLink2" href="#">Source code</a></div>
+    <div class="disc">Paper trading with simulated money: no real capital is invested and no outside money is accepted. Prices are end-of-day closes from Yahoo Finance; fills assume the closing price plus estimated costs. Nothing here is investment advice.</div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const D = __FUND_DATA__;
+const C = D.config, N = D.nav, live = N.length > 0;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const pct = (v, d = 2, s = true) => v == null || !isFinite(v) ? "—" : (s && v > 0 ? "+" : "") + (v * 100).toFixed(d) + "%";
+const num = (v, d = 2) => v == null || !isFinite(v) ? "—" : v.toFixed(d);
+const usd = (v, d = 0) => (v < 0 ? "−" : "") + "$" + Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const cls = v => v > 1e-12 ? "up" : v < -1e-12 ? "down" : "";
+const fmtDate = s => new Date(s + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+const short = s => new Date(s + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const MIN_DAYS = 20;
+
+document.querySelectorAll("#codeLink, #codeLink2").forEach(a => a.href = D.repo);
+document.getElementById("title").textContent = C.FUND_NAME;
+
+/* ---- status + hero ---- */
+const last = live ? N[N.length - 1] : null, first = live ? N[0] : null, days = N.length;
+document.getElementById("status").innerHTML = live
+  ? `<span class="pill live">LIVE</span> Launched ${fmtDate(C.LAUNCH_DATE)} · Day ${days} · Updated after the close on ${fmtDate(last.date)}`
+  : `<span class="pill pre">PRE-LAUNCH</span> Trading starts at the market close on ${fmtDate(C.LAUNCH_DATE)} with ${usd(C.START_CAPITAL)}`;
+const navV = live ? last.nav : C.START_NAV, eqV = live ? last.equity : C.START_CAPITAL;
+document.getElementById("nav").textContent = "$" + navV.toFixed(2);
+const rets = N.map((r, i) => i === 0 ? r.nav / C.START_NAV - 1 : r.nav / N[i - 1].nav - 1);
+const spyBase = live ? D.spyAtLaunch || first.spy : null;
+const itd = navV / C.START_NAV - 1, spyItd = live ? last.spy / spyBase - 1 : null;
+const today = live ? rets[rets.length - 1] : null;
+document.getElementById("navRow").innerHTML = `<span>Fund value <b>${usd(eqV)}</b></span>` +
+  (live ? `<span>Last day <b class="${cls(today)}">${pct(today)}</b></span><span>Since launch <b class="${cls(itd)}">${pct(itd)}</b></span><span>SPY <b class="${cls(spyItd)}">${pct(spyItd)}</b></span>`
+        : `<span>Started at <b>$${C.START_NAV.toFixed(2)}</b> per share</span>`);
+
+/* ---- stats ---- */
+const mean = a => a.reduce((s, x) => s + x, 0) / a.length;
+const sd = a => { const m = mean(a); return Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / Math.max(a.length - 1, 1)); };
+let pk = C.START_NAV, mdd = 0; N.forEach(r => { pk = Math.max(pk, r.nav); mdd = Math.min(mdd, r.nav / pk - 1); });
+const cdd = live ? last.nav / pk - 1 : 0;
+const spyR = N.map((r, i) => i === 0 ? r.spy / spyBase - 1 : r.spy / N[i - 1].spy - 1);
+const enough = days >= MIN_DAYS;
+let beta = null; if (enough) { const mr = mean(rets), ms = mean(spyR); let c = 0, v = 0; rets.forEach((x, i) => { c += (x - mr) * (spyR[i] - ms); v += (spyR[i] - ms) ** 2; }); beta = c / v; }
+const vol = enough ? sd(rets) * Math.sqrt(252) : null, sharpe = enough ? mean(rets) / sd(rets) * Math.sqrt(252) : null;
+const wait = `after ${MIN_DAYS} days`;
+const T = [
+  ["Return since launch", pct(itd), itd], ["SPY since launch", pct(spyItd), spyItd],
+  ["Volatility (ann.)", enough ? pct(vol, 1, false) : "—", null, enough ? "" : wait],
+  ["Sharpe ratio", enough ? num(sharpe) : "—", null, enough ? "" : wait],
+  ["Beta to SPY", enough ? num(beta) : "—", null, enough ? "target 0.00" : wait],
+  ["Max drawdown", pct(mdd), mdd < 0 ? -1 : 0], ["Current drawdown", pct(cdd), cdd < 0 ? -1 : 0],
+  ["Best day", live ? pct(Math.max(...rets)) : "—", live ? Math.max(...rets) : null],
+  ["Worst day", live ? pct(Math.min(...rets)) : "—", live ? Math.min(...rets) : null],
+  ["Gross exposure", live ? pct(last.long_exposure + last.short_exposure, 0, false) : "0%", null, live ? `${pct(last.net_exposure, 0)} net` : "all cash"],
+];
+document.getElementById("tiles").innerHTML = T.map(([l, v, s, e]) => `<div class="tile"><span>${l}</span><b class="${s == null ? "" : cls(s)}">${v}</b>${e ? `<em>${e}</em>` : ""}</div>`).join("");
+document.getElementById("perfSub").textContent = live ? `${days} trading day${days > 1 ? "s" : ""}` : "starts at launch";
+
+/* ---- book ---- */
+const P = D.positions;
+document.getElementById("bookSub").textContent = live ? `Positions after the ${short(last.date)} close` : "All cash until launch";
+document.getElementById("bookTable").innerHTML = P.length
+  ? `<thead><tr><th>Position</th><th>Side</th><th>Shares</th><th>Avg cost</th><th>Last</th><th>Market value</th><th>% of fund</th><th>Unrealized P&amp;L</th></tr></thead><tbody>` +
+    P.map(p => `<tr><td><span class="sym">${p.symbol}</span><span class="sub">${p.name}</span></td><td><span class="side ${p.shares > 0 ? "L" : "S"}">${p.shares > 0 ? "LONG" : "SHORT"}</span></td>
+      <td>${Math.abs(p.shares).toLocaleString("en-US", { maximumFractionDigits: 0 })}</td><td>${p.avg.toFixed(2)}</td><td>${p.price.toFixed(2)}</td>
+      <td>${usd(Math.abs(p.value))}</td><td class="${cls(p.weight)}">${pct(p.weight, 1)}</td><td class="${cls(p.pnl)}">${usd(p.pnl)}</td></tr>`).join("") +
+    `<tr><td><span class="sym">Cash</span><span class="sub">earning the T-bill rate</span></td><td></td><td></td><td></td><td></td><td>${usd(D.cash)}</td><td>${pct(D.cash / eqV, 1, false)}</td><td></td></tr></tbody>`
+  : `<tbody><tr><td><span class="sym">Cash</span><span class="sub">waiting for launch</span></td><td>${usd(C.START_CAPITAL)}</td><td>100.0%</td></tr></tbody>`;
+
+/* ---- blotter ---- */
+const TR = D.trades;
+document.getElementById("tradeSub").textContent = TR.length ? `${D.nTrades} fills since launch · most recent first` : "No trades yet";
+document.getElementById("blotter").innerHTML = TR.length
+  ? `<thead><tr><th>Date</th><th>Action</th><th>Symbol</th><th>Shares</th><th>Fill price</th><th>Notional</th><th>Est. cost</th><th>Why</th></tr></thead><tbody>` +
+    TR.map(t => `<tr><td>${t.date}</td><td><span class="side ${t.side.includes("SELL") ? "S" : "L"}">${t.side}</span></td><td>${t.ticker}</td>
+      <td>${Math.abs(t.qty).toLocaleString("en-US", { maximumFractionDigits: 0 })}</td><td>${(+t.price).toFixed(2)}</td><td>${usd(Math.abs(t.value))}</td><td>${usd(+t.cost, 2)}</td><td class="reason">${t.reason}</td></tr>`).join("") + "</tbody>"
+  : `<tbody><tr><td class="reason">The first trades happen at the launch close. They'll appear here, time-stamped, the same evening.</td></tr></tbody>`;
+
+/* ---- formula + costs ---- */
+document.getElementById("formulaBox").innerHTML =
+  `<span class="k">score</span> = ${C.W_MOM} × z(<span class="k">momentum</span>) + ${C.W_TREND} × z(<span class="k">trend</span>)<br>` +
+  `<span class="c">momentum = ${C.MOM_LOOKBACK / 21}-month return, skipping the latest month<br>trend = price vs its ${C.TREND_SMA}-day average<br>z(x) = standard deviations above the average sector that day</span>`;
+document.getElementById("rules").innerHTML = [
+  `<b>Rank</b> the ${C.SECTORS.length} sector ETFs by score after each close.`,
+  `<b>Rebalance monthly:</b> long the top ${C.N_SIDE}, short the bottom ${C.N_SIDE}, equal dollars per name. A holding stays until it falls below rank ${C.EXIT_RANK}, which avoids trading on small ranking changes.`,
+  `<b>Size</b> the book to ${C.VOL_TARGET * 100}% expected annual volatility, capped at ${C.MAX_GROSS * 100}% gross exposure.`,
+  `<b>Hedge</b> the book's market beta with ${C.HEDGE}, so returns come from the sector spread, not from the market rising.`,
+  `<b>Cut risk in half</b> if the fund falls ${Math.abs(C.DD_CUT * 100)}% from its peak; restore it above ${Math.abs(C.DD_RESET * 100)}%.`,
+].map(x => `<li>${x}</li>`).join("");
+const tot = D.totals;
+document.getElementById("costs").innerHTML = Object.entries(tot).map(([k, v]) => `<div><span>${k}</span><b class="${k === "Interest earned" ? cls(v) : ""}">${usd(v)}</b></div>`).join("");
+document.getElementById("feeNote").textContent = `Fees: ${C.MGMT_FEE * 100}% a year management, charged daily, and ${C.PERF_FEE * 100}% of gains above a high-water mark, charged each January. Trades cost ${C.COST_BPS} basis points, shorts cost ${C.BORROW_FEE * 100}% a year to borrow, and cash earns the 3-month Treasury bill rate. The NAV above is after all of it.`;
+
+/* ---- pre-launch check ---- */
+const K = D.check;
+document.getElementById("checkBox").innerHTML = K
+  ? `<div class="wrap"><table><thead><tr><th></th><th>Annual return</th><th>Volatility</th><th>Sharpe</th><th>Max drawdown</th></tr></thead><tbody>` +
+    [["fund_in", `Fund, ${K.from.slice(0, 4)}–${+K.split.slice(0, 4) - 1}`], ["fund_out", `Fund, ${K.split.slice(0, 4)}–${K.to.slice(0, 4)}`], ["spy_in", `SPY, ${K.from.slice(0, 4)}–${+K.split.slice(0, 4) - 1}`], ["spy_out", `SPY, ${K.split.slice(0, 4)}–${K.to.slice(0, 4)}`]]
+      .map(([k, l]) => `<tr><td>${l}</td><td class="${cls(K[k].cagr)}">${pct(K[k].cagr, 1)}</td><td>${pct(K[k].vol, 1, false)}</td><td>${num(K[k].sharpe)}</td><td>${pct(K[k].mdd, 1)}</td></tr>`).join("") +
+    `</tbody></table></div><p class="note">Run once on ${K.ran}${K.demo ? " (simulated prices)" : ""}, using the same engine as the live fund. Beta to SPY ${num(K.beta)}, about ${K.trades_per_year} trades a year, average gross exposure ${pct(K.avg_gross, 0, false)}. This is a sanity check, not the track record: the live numbers above are the only results that count.</p>`
+  : `<p class="note">Not run yet.</p>`;
+
+/* ---- charts ---- */
+let charts = {};
+function draw() {
+  if (!live) {
+    document.getElementById("navWrap").innerHTML = `<div class="empty">The chart starts at the launch close on ${fmtDate(C.LAUNCH_DATE)}.<br>Every point after that is a real, after-the-fact NAV.</div>`;
+    document.getElementById("expWrap").style.display = "none"; return;
+  }
+  const c = { ink: css("--ink"), muted: css("--muted"), line: css("--line"), surface: css("--surface"), accent: css("--accent"), spy: css("--spy"), pos: css("--pos"), neg: css("--neg") };
+  const labels = [C.LAUNCH_DATE + "*", ...N.map(r => r.date)];
+  const fund = [C.START_NAV, ...N.map(r => r.nav)], spy = [C.START_NAV, ...N.map(r => C.START_NAV * r.spy / spyBase)];
+  const base = yFmt => ({ responsive: true, maintainAspectRatio: false, animation: matchMedia("(prefers-reduced-motion: reduce)").matches ? false : { duration: 250 },
+    interaction: { mode: "index", intersect: false },
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: c.surface, titleColor: c.ink, bodyColor: c.ink, borderColor: c.line, borderWidth: 1,
+      callbacks: { title: it => it[0].label.endsWith("*") ? "Launch (start)" : fmtDate(it[0].label), label: it => ` ${it.dataset.label}: ${yFmt(it.raw)}` } } },
+    scales: { x: { grid: { display: false }, border: { color: c.line }, ticks: { color: c.muted, maxRotation: 0, autoSkipPadding: 20, callback(v) { const l = this.getLabelForValue(v); return l.endsWith("*") ? "Start" : short(l); } } },
+      y: { grid: { color: c.line }, border: { display: false }, ticks: { color: c.muted, callback: yFmt } } } });
+  charts.nav?.destroy(); charts.nav = new Chart(document.getElementById("navChart"), { type: "line", options: base(v => "$" + v.toFixed(2)),
+    data: { labels, datasets: [
+      { label: "Fund NAV", data: fund, borderColor: c.accent, backgroundColor: c.accent, borderWidth: 2.4, pointRadius: N.length < 30 ? 2.5 : 0, tension: 0 },
+      { label: "SPY", data: spy, borderColor: c.spy, borderDash: [5, 4], borderWidth: 1.4, pointRadius: 0, tension: 0 }] } });
+  const o2 = base(v => Math.round(v * 100) + "%"); o2.scales.x.ticks.display = false; o2.scales.y.ticks.maxTicksLimit = 3;
+  charts.exp?.destroy(); charts.exp = new Chart(document.getElementById("expChart"), { type: "bar", options: o2,
+    data: { labels: N.map(r => r.date), datasets: [
+      { label: "Long", data: N.map(r => r.long_exposure), backgroundColor: c.pos + "aa", stack: "e" },
+      { label: "Short", data: N.map(r => -r.short_exposure), backgroundColor: c.neg + "aa", stack: "e" }] } });
+}
+draw();
+new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+</script>
+</body>
+</html>
