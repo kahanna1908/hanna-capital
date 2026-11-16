@@ -52,7 +52,7 @@ The fund's books live in `data/`: `nav.csv` (daily NAV and exposures), `trades.c
 | Version | Strategy | Status |
 |---|---|---|
 | v2 (this page) | Sector market-neutral long/short | Live since the close of 2026-11-16 |
-| v3 | Multi-asset trend following across 32 ETFs ([design](v3/DESIGN.md), [site](https://kahanna1908.github.io/hanna-capital/v3/)) | Designed, pre-launch check pending |
+| v3 | Multi-asset trend following across 32 ETFs ([design](v3/DESIGN.md), [site](https://kahanna1908.github.io/hanna-capital/v3/)) | Launches at the close of 2026-11-17 |
 
 Rules for versions: a live fund's formula is never edited. A change means a new version with its own launch date,
 starting at $100. Every version stays public, including the ones that don't work. A version is retired only after

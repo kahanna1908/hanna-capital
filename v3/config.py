@@ -3,7 +3,7 @@
 VERSION = "v3"
 FUND_NAME = "Hanna Capital Multi-Asset Trend Fund"
 MANAGER = "Kyle Hanna"
-LAUNCH_DATE = None                # set after the formula check is reviewed; never backdated
+LAUNCH_DATE = "2026-11-17"        # first trading close v3 acts on, set after the formula check; never backdated
 START_CAPITAL = 10_000_000
 START_NAV = 100.0
 DATA_DIR = "data/v3"
