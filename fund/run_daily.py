@@ -8,6 +8,7 @@ Processes any closes since the last run that are on or after LAUNCH_DATE, then s
 import csv
 import json
 import os
+import sys
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -52,8 +53,10 @@ def main():
     if not todo:
         print(f"Nothing to do. Latest close in data: {px.index[-1].date()}, fund launches {C.LAUNCH_DATE}.")
         return
+    stuck = None
     for d in todo:
         if not complete[d]:
+            stuck = d
             missing = [t for t in C.SECTORS + [C.HEDGE] if pd.isna(px.at[d, t])]
             print(f"{d.date()}: no close yet for {', '.join(missing)}; stopping, the next run retries.")
             break
@@ -72,6 +75,9 @@ def main():
               f"short {row['short_exposure']:.0%}  trades {len(trades)}")
     with open(STATE, "w") as f:
         json.dump(state, f, indent=1)
+    if stuck is not None and stuck < today:
+        print(f"::error::{stuck.date()} is still missing a close after the following day; the fund is stuck.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

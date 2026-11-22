@@ -20,6 +20,9 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
+    outputs:
+      v2: ${{ steps.v2.outcome }}
+      v3: ${{ steps.v3.outcome }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -27,9 +30,12 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - name: Process today's close (v2)
+        id: v2
+        continue-on-error: true       # one fund's problem must never block the other's books or the site
         run: python -m fund.run_daily
       - name: Process today's close (v3)
-        continue-on-error: true       # a v3 problem must never block v2's books
+        id: v3
+        continue-on-error: true
         run: python -m v3.run_daily
       - name: Save the books
         run: |
@@ -54,3 +60,12 @@ jobs:
     steps:
       - id: pages
         uses: actions/deploy-pages@v4
+
+  alert:                          # fails the run (GitHub emails the owner) if a fund errored or is stuck
+    needs: [run, deploy]
+    if: ${{ always() && (needs.run.outputs.v2 == 'failure' || needs.run.outputs.v3 == 'failure') }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::A fund did not finish: v2 ${{ needs.run.outputs.v2 }}, v3 ${{ needs.run.outputs.v3 }}. Open the 'run' job log for the reason."
+          exit 1

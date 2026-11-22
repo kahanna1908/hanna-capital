@@ -159,9 +159,8 @@ def side_of(before: float, after: float) -> str:
 
 # ----------------------------------------------------------------------------- data
 def download(start: str):
-    import yfinance as yf
-    raw = yf.download(C.ASSETS + [C.RATE_TICKER], start=start, auto_adjust=True, progress=False)["Close"]
-    raw.index = pd.to_datetime(raw.index).tz_localize(None)
+    from fund.data import closes
+    raw = closes(C.ASSETS + [C.RATE_TICKER], start)
     rate = (raw[C.RATE_TICKER].ffill() / 100).fillna(0.0)
     px = raw[C.ASSETS].dropna(subset=[C.BENCHMARK])
     return px, rate.reindex(px.index).ffill().fillna(0.0)
